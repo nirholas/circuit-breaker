@@ -13,7 +13,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const DIST = join(HERE, "dist");
 const hook = JSON.parse(readFileSync(join(HERE, "..", "hook.json"), "utf8"));
 
-const SITE = "https://circuit-breaker.pages.dev";
+const SITE = "https://circuit-breaker-1bp.pages.dev";
 const REPO = "https://github.com/nirholas/circuit-breaker";
 const CATALOGUE = "https://hookforge.pages.dev";
 
