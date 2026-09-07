@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircuitBreaker: Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time</title>
+<meta name="description" content="Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.">
+<link rel="canonical" href="https://circuit-breaker.pages.dev/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#07080b">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CircuitBreaker">
+<meta property="og:title" content="CircuitBreaker">
+<meta property="og:description" content="Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.">
+<meta property="og:url" content="https://circuit-breaker.pages.dev/">
+<meta property="og:image" content="https://circuit-breaker.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CircuitBreaker">
+<meta name="twitter:description" content="Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.">
+<meta name="twitter:image" content="https://circuit-breaker.pages.dev/og.png">
+
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="alternate" type="text/plain" title="For language models" href="/llms.txt">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"CircuitBreaker","description":"Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.","url":"https://circuit-breaker.pages.dev","codeRepository":"https://github.com/nirholas/circuit-breaker","programmingLanguage":"Solidity","runtimePlatform":"Ethereum Virtual Machine","license":"https://opensource.org/licenses/MIT","keywords":"risk, circuit-breaker, oracle-free, no-admin","isPartOf":{"@type":"WebSite","name":"HookForge","url":"https://hookforge.pages.dev"}}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <div class="shell masthead__inner">
+    <a class="brand" href="/">CircuitBreaker</a>
+    <nav aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#using">Using it</a>
+      <a href="#deploy">Deploy</a>
+      <a href="https://github.com/nirholas/circuit-breaker" rel="noopener">GitHub</a>
+      <a href="https://hookforge.pages.dev" rel="noopener">Catalogue</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="shell hero">
+    <p class="eyebrow">Uniswap v4 hook &middot; Risk</p>
+    <h1>CircuitBreaker</h1>
+    <p class="lede">Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.</p>
+    <div class="cta-row">
+      <a class="btn btn--primary" href="https://github.com/nirholas/circuit-breaker" rel="noopener">Source on GitHub</a>
+      <a class="btn" href="#using">Use it in a pool</a>
+      <a class="btn" href="/hook.json">Manifest JSON</a>
+    </div>
+
+    <div class="scene">
+      <canvas data-permissions="{&quot;afterRemoveLiquidityReturnsDelta&quot;:false,&quot;afterAddLiquidityReturnsDelta&quot;:false,&quot;afterSwapReturnsDelta&quot;:false,&quot;beforeSwapReturnsDelta&quot;:false,&quot;afterDonate&quot;:false,&quot;beforeDonate&quot;:false,&quot;afterSwap&quot;:true,&quot;beforeSwap&quot;:true,&quot;afterRemoveLiquidity&quot;:false,&quot;beforeRemoveLiquidity&quot;:false,&quot;afterAddLiquidity&quot;:false,&quot;beforeAddLiquidity&quot;:false,&quot;afterInitialize&quot;:true,&quot;beforeInitialize&quot;:false}" aria-hidden="true"></canvas>
+      <p class="scene__fallback">CircuitBreaker implements 3 of the fourteen Uniswap v4 callbacks: afterInitialize, beforeSwap, afterSwap.</p>
+    </div>
+
+    <dl class="stats">
+      <div class="stat"><dt>Family</dt><dd>Risk</dd></div>
+      <div class="stat"><dt>Callbacks</dt><dd>3 of 14</dd></div>
+      <div class="stat"><dt>Fee</dt><dd>static</dd></div>
+      <div class="stat"><dt>Admin keys</dt><dd>none</dd></div>
+      <div class="stat"><dt>Licence</dt><dd>MIT</dd></div>
+    </dl>
+  </section>
+
+  <section class="shell">
+    <h2 id="how">How it works</h2>
+      <p>Every venue outside crypto stops trading after a limit move, for a reason that has nothing to do with paternalism: a violent move is usually either an error or an attack, and the cheapest defence against both is to stop, let information arrive, and start again. On-chain the same event is normally handled by a governance multisig that pauses a contract minutes after it mattered. This hook makes the rule mechanical and local to one pool.</p>
+      <p>It keeps a reference tick, refreshed at most once per `windowSeconds`. After every swap it compares the new tick to that reference. If the pool moved further than `maxTickMove`, swapping halts for `cooldownSeconds` and then resumes on its own.</p>
+      <p>There is no admin, no pause key and no way for anyone, including the deployer, to halt a pool that has not moved or to extend a halt that has expired. The design decision worth stating: the swap that breaches the limit is allowed to complete. Reverting it instead would turn the hook into a price cap, and a price cap on an AMM is a strictly worse instrument than a halt.</p>
+      <p>It cannot be enforced (the same move arrives as several smaller swaps), it strands the pool at a price the market has left, and it guarantees that the arbitrage against the pool stays open and profitable for as long as the cap holds. Halting after the fact gives up the last swap and buys the thing that actually matters, which is time. Liquidity operations are never blocked.</p>
+      <p>A provider can withdraw during a halt, which is the property that makes this safe to use: the worst case for someone caught in a halted pool is that they exit rather than trade. 0001^1`), so `maxTickMove = 500` is a five percent move. Prior art: pause-guardian patterns are everywhere and oracle-deviation checks exist as hooks.</p>
+      <p>An autonomous, self-clearing, per-pool halt with no privileged role and no oracle does not.</p>
+
+    <div class="callout callout--prior"><h3>Prior art</h3><p>Pause-guardian patterns are everywhere and oracle-deviation checks exist as hooks. An autonomous, self-clearing, per-pool halt with no privileged role and no oracle does not.</p></div>
+    <div class="callout callout--warn"><h3>Where it does not help</h3><p>A halt is a blunt instrument: it stops honest trading as well as the attack, and it leaves the pool arbitrageable the moment it lifts. It is the right trade only where the alternative is a pool drained at a price nobody would have quoted.</p></div>
+
+    <h2 id="using">Using it</h2>
+    <p>
+      Uniswap v4 removed <code>hookData</code> from <code>initialize</code>, so per-pool parameters arrive out of band.
+      Fix them for a pool key whose pool does not exist yet, then initialize. Nobody can change them afterwards,
+      including you.
+    </p>
+    <pre><code>hook.configure(
+    key,
+    CircuitBreakerHook.Config({
+        maxTickMove: /* uint24 */ 0,
+        windowSeconds: /* uint32 */ 0,
+        cooldownSeconds: /* uint32 */ 0
+    })
+);
+
+poolManager.initialize(key, startingSqrtPriceX96);</code></pre>
+    
+
+    <h3>Parameters</h3>
+    <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Units</th></tr></thead>
+        <tbody><tr><td><code>maxTickMove</code></td><td><code>uint24</code></td><td>ticks</td></tr>
+          <tr><td><code>windowSeconds</code></td><td><code>uint32</code></td><td>seconds</td></tr>
+          <tr><td><code>cooldownSeconds</code></td><td><code>uint32</code></td><td>seconds</td></tr></tbody>
+      </table>
+
+    <h3>From TypeScript</h3>
+    <pre><code>npm i @hookforge/sdk
+
+import {getHook, hookAddress, poolKeyFor} from "@hookforge/sdk";
+
+const hook = getHook("circuit-breaker");
+const key  = poolKeyFor({
+  hook: hookAddress("circuit-breaker", 8453),   // Base
+  currencyA: USDC, currencyB: WETH,
+  tickSpacing: 60,
+});</code></pre>
+
+    <h2>What it reverts with</h2>
+    <table>
+        <thead><tr><th>Error</th><th>Meaning</th></tr></thead>
+        <tbody><tr><td><code>InvalidConfig()</code></td><td><code>maxTickMove</code>, <code>windowSeconds</code> and <code>cooldownSeconds</code> must all be non-zero.</td></tr>
+          <tr><td><code>PoolAlreadyInitialized()</code></td><td>The pool already exists, so its configuration is final.</td></tr>
+          <tr><td><code>PoolHalted(uint64)</code></td><td>Swapping is halted until <code>until</code>. Liquidity may still be added or removed.</td></tr>
+          <tr><td><code>PoolNotConfigured()</code></td><td>The pool was initialized without a configuration for this hook.</td></tr></tbody>
+      </table>
+
+    <h2>The callbacks it claims</h2>
+    <p>
+      Uniswap v4 reads a hook's permissions from the low fourteen bits of its own address, which is why deploying one
+      means mining a CREATE2 salt. This hook claims 3, so every deployment of it has an address ending
+      in <code>0x10c0</code>.
+    </p>
+    <ul class="flags"><li class="flag">beforeInitialize</li><li class="flag flag--on">afterInitialize</li><li class="flag">beforeAddLiquidity</li><li class="flag">afterAddLiquidity</li><li class="flag">beforeRemoveLiquidity</li><li class="flag">afterRemoveLiquidity</li><li class="flag flag--on">beforeSwap</li><li class="flag flag--on">afterSwap</li><li class="flag">beforeDonate</li><li class="flag">afterDonate</li><li class="flag">beforeSwapReturnsDelta</li><li class="flag">afterSwapReturnsDelta</li><li class="flag">afterAddLiquidityReturnsDelta</li><li class="flag">afterRemoveLiquidityReturnsDelta</li></ul>
+
+    <h2>It says what it is, on-chain</h2>
+    <p>
+      Nothing about a hook's address tells an indexer, a wallet, a router or an agent what the pool does, which is why
+      hook discovery today is a curated list. This hook answers for itself, in one <code>eth_call</code>, with no
+      registry in the loop.
+    </p>
+    <pre><code>cast call $HOOK "hookName()(string)"    # CircuitBreaker
+cast call $HOOK "specURI()(string)"     # https://circuit-breaker.pages.dev/hook.json
+cast call $HOOK "hookTags()(string[])"  # risk, circuit-breaker, oracle-free, no-admin</code></pre>
+
+    <h2 id="deploy">Build, test and deploy</h2>
+    <pre><code>git clone --recurse-submodules https://github.com/nirholas/circuit-breaker
+cd circuit-breaker
+forge build &amp;&amp; forge test
+
+# Dry run: mines the salt, prints the address, sends nothing.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL
+
+# For real.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify</code></pre>
+
+    <div class="callout callout--warn">
+      <h3>Status</h3>
+      <p>
+        <strong>Unaudited.</strong> Built to an audited shape, on OpenZeppelin's audited hook bases, and tested against
+        a real <code>PoolManager</code>. No third party has reviewed it. Read "where it does not help" above before
+        putting money behind it. Not affiliated with Uniswap Labs.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p>
+      <a href="https://github.com/nirholas/circuit-breaker" rel="noopener">Source</a> &middot;
+      <a href="/hook.json">Manifest</a> &middot;
+      <a href="/llms.txt">llms.txt</a> &middot;
+      <a href="https://hookforge.pages.dev" rel="noopener">The rest of the catalogue</a>
+    </p>
+    <p>MIT licensed. Not affiliated with Uniswap Labs.</p>
+  </div>
+</footer>
+<script type="module" src="/assets/scene.js"></script>
+</body>
+</html>

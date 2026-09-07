@@ -1,0 +1,29 @@
+{
+  "name": "circuit-breaker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Halts swapping for a cooldown after the price moves further than a pool is willing to move in one window, and lets liquidity leave the whole time.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nirholas/circuit-breaker.git"
+  },
+  "homepage": "https://circuit-breaker.pages.dev",
+  "keywords": [
+    "uniswap",
+    "uniswap-v4",
+    "uniswap-hooks",
+    "defi",
+    "amm",
+    "solidity",
+    "risk",
+    "circuit-breaker",
+    "oracle-free",
+    "no-admin"
+  ],
+  "scripts": {
+    "build": "node web/build.mjs",
+    "contracts:build": "forge build",
+    "contracts:test": "forge test"
+  }
+}
