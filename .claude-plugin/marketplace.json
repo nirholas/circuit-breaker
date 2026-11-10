@@ -1,0 +1,23 @@
+{
+  "name": "circuit-breaker",
+  "owner": {
+    "name": "nirholas"
+  },
+  "description": "CircuitBreakerHook Uniswap v4 hook: build, test, configure and deploy it with a mined CREATE2 salt.",
+  "plugins": [
+    {
+      "name": "circuit-breaker",
+      "source": "./",
+      "description": "CircuitBreakerHook Uniswap v4 hook: build, test, configure and deploy it with a mined CREATE2 salt.",
+      "tags": [
+        "uniswap-v4",
+        "hooks",
+        "solidity",
+        "foundry",
+        "risk",
+        "circuit-breaker",
+        "no-admin"
+      ]
+    }
+  ]
+}
